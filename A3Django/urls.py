@@ -20,7 +20,10 @@ from django.urls import path
 import app.views
 
 urlpatterns = [
+    path('user/getUserInfo/', app.views.get_user_info),
     path('user/login/', app.views.login),
+    path('user/register/', app.views.register),
+    path('flights/getFlightsPage/', app.views.get_flights_page),
     path('admin/', admin.site.urls),
 
 ]
