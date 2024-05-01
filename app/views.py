@@ -1,6 +1,8 @@
 import uuid
 
 from django.core.cache import cache
+from django.db.models import Q
+from django.forms import model_to_dict
 from django.http import HttpResponse
 from django.shortcuts import render
 
@@ -57,7 +59,16 @@ def register(request):
 
 
 def get_flights_page(request):
-    flights = models.Flights.objects.all()
+    min_price = request.GET.get('minPrice')
+    max_price = request.GET.get('maxPrice')
+
+    filters = Q()
+    if min_price:
+        filters &= Q(price__gte=min_price)
+    if max_price:
+        filters &= Q(price__lte=max_price)
+
+    flights = models.Flights.objects.filter(filters)
 
     flights_list = list(flights.values())
 
@@ -77,3 +88,42 @@ def get_user_info(request):
         return A3Django.common.success_data(login_user)
     else:
         return A3Django.common.fail('invalid token')
+
+
+def update_user_info(request):
+    token = request.headers.get('Authorization')
+    login_user = cache.get(token)
+
+    if login_user:
+
+        user = models.Users.objects.get(id=login_user['id'])
+
+        if 'age' in request.GET:
+            user.age = request.GET.get('age')
+
+        if 'username' in request.GET:
+            user.username = request.GET.get('username')
+        user.save()
+
+        user_dict = model_to_dict(user)
+
+        return A3Django.common.success_data(user_dict)
+    else:
+        return A3Django.common.fail('invalid token')
+
+
+def update_user_password(request):
+    token = request.headers.get('Authorization')
+    login_user = cache.get(token)
+
+    if login_user:
+        user = models.Users.objects.get(id=login_user['id'])
+        if 'password' in request.POST:
+            user.password = request.POST.get('password')
+            user.save()
+            return A3Django.common.success()
+        else:
+            return A3Django.common.fail('please enter your password')
+    else:
+        return A3Django.common.fail('invalid token')
+
